@@ -28,6 +28,7 @@ After pulling a new version, run `docker compose up -d --build` again.
 - **Turn button**: enabled only on the current player's phone. Double taps can't skip anyone.
 - **Host controls**: Skip the current player, go back one turn, **reverse the turn order** (⇄, play flips direction around the table; seats stay put), give the turn to anyone (▶), end the game.
 - **Extra buttons**: the host adds or removes buttons like "I win! 🏆" that every player sees. Pressing one shows a full-screen announcement on every phone.
+- **Your own button**: tap your name (✎) or "🎨 Customize my button" to pick a color (8), shape (circle, rounded, wide) and size (small, medium, large) with a live preview. Saved on your phone with your name.
 - **Reactions**: during a game anyone can send 👍 👎 😂 😮 or ⏰ "Hurry up". It pops up briefly in the middle of every phone with the sender's name. Hurry up names the current player and buzzes their phone (you can't hurry yourself). Rate-limited so nobody can spam the table.
 - **Game over summary**: when the host ends the game, every phone shows each player's turn count (most turns highlighted), skips, total turns and game length. "📊 Last game" in the lobby reopens it. Skips don't count as turns, and "Previous" takes back the turn or skip it undoes.
 - **Keeps the screen awake** using the Screen Wake Lock API.

@@ -25,6 +25,7 @@
       <span>Your name</span>
       <input id="nameInput" maxlength="24" autocomplete="nickname" placeholder="e.g. Sam">
     </label>
+    <button id="styleBtn" class="link-btn">🎨 Customize my button</button>
     <label id="customCodeField" class="field hidden">
       <span>Your room code (3–8 letters or numbers)</span>
       <input id="customCodeInput" class="code-input" maxlength="8" placeholder="e.g. CATAN" autocapitalize="characters" autocomplete="off" spellcheck="false">
@@ -43,7 +44,7 @@
     <header class="top">
       <button id="leaveBtn" class="icon-btn" aria-label="Leave room">←</button>
       <button id="codeBtn" class="code" aria-label="Invite players"><small>Room</small> <b id="roomCode">----</b></button>
-      <button id="meBtn" class="me" aria-label="Change your name"><span id="meName"></span> ✎</button>
+      <button id="meBtn" class="me" aria-label="Your name and button style"><span id="meName"></span> ✎</button>
     </header>
 
     <div id="status" class="status"></div>
@@ -136,6 +137,14 @@
   <dialog id="nameDialog">
     <form method="dialog">
       <label class="field"><span>Your name</span><input id="dialogName" maxlength="24"></label>
+      <div class="opt-label">Your turn button</div>
+      <div class="preview-wrap"><div id="btnPreview" class="turn-preview">Your turn!</div></div>
+      <div class="opt-label">Color</div>
+      <div id="colorOpts" class="swatches"></div>
+      <div class="opt-label">Shape</div>
+      <div id="shapeOpts" class="seg"></div>
+      <div class="opt-label">Size</div>
+      <div id="sizeOpts" class="seg"></div>
       <div class="row"><button value="cancel" class="btn">Cancel</button><button value="ok" class="btn primary">Save</button></div>
     </form>
   </dialog>

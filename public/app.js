@@ -437,13 +437,97 @@ $('shareLinkBtn').onclick = async () => {
 // Tap outside the sheet to close it
 $('inviteDialog').addEventListener('click', (e) => { if (e.target === $('inviteDialog')) closeDialog($('inviteDialog')); });
 
-$('meBtn').onclick = () => {
-  $('dialogName').value = myName;
-  openDialog($('nameDialog'));
+// ---------- your turn button style (per phone, saved like the name) ----------
+const COLORS = {
+  green: '#3ddc84', teal: '#2dd4bf', blue: '#4da3ff', purple: '#a77bff',
+  pink: '#ff6fae', red: '#ff5c5c', orange: '#ff9f40', yellow: '#ffd23f',
 };
+const SHAPES = { circle: 'Circle', rounded: 'Rounded', wide: 'Wide' };
+const SIZES = { s: 'Small', m: 'Medium', l: 'Large' };
+// Button dimensions per shape+size, and a scaled-down version for the preview.
+const DIMS = {
+  circle: { s: ['min(56vw, 230px)', 'min(56vw, 230px)'], m: ['min(78vw, 320px)', 'min(78vw, 320px)'], l: ['min(92vw, 420px)', 'min(92vw, 420px)'] },
+  rounded: { s: ['min(56vw, 230px)', 'min(56vw, 230px)'], m: ['min(78vw, 320px)', 'min(78vw, 320px)'], l: ['min(92vw, 420px)', 'min(92vw, 420px)'] },
+  wide: { s: ['min(92vw, 440px)', '120px'], m: ['min(92vw, 440px)', '180px'], l: ['min(92vw, 440px)', '260px'] },
+};
+const PREVIEW = {
+  circle: { s: [90, 90], m: [118, 118], l: [146, 146] },
+  rounded: { s: [90, 90], m: [118, 118], l: [146, 146] },
+  wide: { s: [220, 60], m: [220, 90], l: [220, 130] },
+};
+const RADIUS = { circle: '50%', rounded: '22%', wide: '28px' };
+const DEFAULT_STYLE = { color: 'green', shape: 'circle', size: 'm' };
+
+function loadStyle() {
+  let s = {};
+  try { s = JSON.parse(store.get('btn') || '{}') || {}; } catch {}
+  return {
+    color: COLORS[s.color] ? s.color : DEFAULT_STYLE.color,
+    shape: SHAPES[s.shape] ? s.shape : DEFAULT_STYLE.shape,
+    size: SIZES[s.size] ? s.size : DEFAULT_STYLE.size,
+  };
+}
+let btnStyle = loadStyle();
+
+function colorVars(name) {
+  const hex = COLORS[name];
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255; // dark text on light colors
+  return { '--btn': hex, '--btn-rgb': `${r}, ${g}, ${b}`, '--btn-ink': lum > 0.55 ? '#111317' : '#ffffff' };
+}
+function applyButtonStyle(target, s, preview) {
+  const vars = { ...colorVars(s.color), '--btn-radius': RADIUS[s.shape] };
+  if (preview) {
+    const [w, h] = PREVIEW[s.shape][s.size];
+    Object.assign(vars, { '--pv-w': w + 'px', '--pv-h': h + 'px' });
+  } else {
+    const [w, h] = DIMS[s.shape][s.size];
+    Object.assign(vars, { '--btn-w': w, '--btn-h': h });
+  }
+  for (const [k, v] of Object.entries(vars)) target.style.setProperty(k, v);
+}
+applyButtonStyle(document.documentElement, btnStyle);
+
+let draftStyle = btnStyle;
+function renderStyleOptions() {
+  const pressed = (b, on) => b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  $('colorOpts').replaceChildren(...Object.entries(COLORS).map(([name, hex]) => {
+    const b = el('button', 'swatch');
+    b.type = 'button';
+    b.style.background = hex;
+    b.setAttribute('aria-label', name);
+    pressed(b, draftStyle.color === name);
+    b.onclick = () => { draftStyle = { ...draftStyle, color: name }; renderStyleOptions(); };
+    return b;
+  }));
+  const seg = (box, options, key) => box.replaceChildren(...Object.entries(options).map(([val, label]) => {
+    const b = el('button', '', label);
+    b.type = 'button';
+    pressed(b, draftStyle[key] === val);
+    b.onclick = () => { draftStyle = { ...draftStyle, [key]: val }; renderStyleOptions(); };
+    return b;
+  }));
+  seg($('shapeOpts'), SHAPES, 'shape');
+  seg($('sizeOpts'), SIZES, 'size');
+  applyButtonStyle($('btnPreview'), draftStyle, true);
+}
+
+function openYouSheet() {
+  $('dialogName').value = myName || $('nameInput').value.trim();
+  draftStyle = { ...btnStyle };
+  renderStyleOptions();
+  openDialog($('nameDialog'));
+}
+$('meBtn').onclick = openYouSheet;
+$('styleBtn').onclick = openYouSheet;
 $('nameDialog').addEventListener('close', () => {
+  if ($('nameDialog').returnValue !== 'ok') return;
+  btnStyle = draftStyle;
+  store.set('btn', JSON.stringify(btnStyle));
+  applyButtonStyle(document.documentElement, btnStyle);
   const v = $('dialogName').value.trim();
-  if ($('nameDialog').returnValue === 'ok' && v) { setName(v); if (room) render(); }
+  if (v && v !== myName) setName(v);
+  if (room) render();
 });
 
 $('startBtn').onclick = () => send({ type: 'start' });
