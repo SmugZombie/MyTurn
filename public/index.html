@@ -35,11 +35,12 @@
   <section id="room" class="screen hidden">
     <header class="top">
       <button id="leaveBtn" class="icon-btn" aria-label="Leave room">←</button>
-      <button id="codeBtn" class="code" aria-label="Share room code"><small>Room</small> <b id="roomCode">----</b></button>
+      <button id="codeBtn" class="code" aria-label="Invite players"><small>Room</small> <b id="roomCode">----</b></button>
       <button id="meBtn" class="me" aria-label="Change your name"><span id="meName"></span> ✎</button>
     </header>
 
     <div id="status" class="status"></div>
+    <button id="inviteBtn" class="btn invite-btn hidden">▦ Invite players</button>
 
     <!-- The one big button -->
     <div id="turnWrap" class="turn-wrap hidden">
@@ -87,6 +88,19 @@
   <div id="toast" class="toast hidden"></div>
   <div id="conn" class="conn hidden">Reconnecting…</div>
 
+  <dialog id="inviteDialog" class="invite">
+    <form method="dialog">
+      <div class="invite-head"><span class="muted">Scan to join room</span><b id="inviteCode"></b></div>
+      <div id="qr" class="qr" role="img" aria-label="QR code to join this room"></div>
+      <div id="inviteUrl" class="invite-url"></div>
+      <div class="row">
+        <button type="button" id="copyLinkBtn" class="btn">Copy link</button>
+        <button type="button" id="shareLinkBtn" class="btn primary">Share…</button>
+      </div>
+      <button value="close" class="btn">Close</button>
+    </form>
+  </dialog>
+
   <dialog id="nameDialog">
     <form method="dialog">
       <label class="field"><span>Your name</span><input id="dialogName" maxlength="24"></label>
@@ -94,6 +108,7 @@
     </form>
   </dialog>
 
+  <script src="/vendor/qrcode.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

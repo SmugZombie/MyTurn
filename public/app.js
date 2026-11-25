@@ -127,6 +127,8 @@ function render() {
     $('status').textContent = n > 1 ? `Next up: ${players[nextIdx].name}` : '';
   }
 
+  $('inviteBtn').classList.toggle('hidden', room.started);
+
   // Big button
   $('turnWrap').classList.toggle('hidden', !room.started);
   const btn = $('turnBtn');
@@ -308,13 +310,34 @@ $('leaveBtn').onclick = () => {
   exitRoom();
 };
 
-$('codeBtn').onclick = async () => {
-  const url = `${location.origin}/${room.code}`;
+// ---------- invite (QR + link) ----------
+const inviteUrl = () => `${location.origin}/${room.code}`;
+
+function openInvite() {
+  if (!room) return;
+  const url = inviteUrl();
+  $('inviteCode').textContent = room.code;
+  $('inviteUrl').textContent = url.replace(/^https?:\/\//, '');
   try {
-    if (navigator.share) await navigator.share({ title: 'Join my MyTurn room', text: `Room code ${room.code}`, url });
-    else { await navigator.clipboard.writeText(url); toast('Link copied'); }
-  } catch {}
+    const qr = qrcode(0, 'M'); // auto-size, medium error correction
+    qr.addData(url);
+    qr.make();
+    $('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+  } catch { $('qr').textContent = 'Could not draw QR code'; }
+  $('shareLinkBtn').classList.toggle('hidden', !navigator.share);
+  $('inviteDialog').showModal();
+}
+$('codeBtn').onclick = openInvite;
+$('inviteBtn').onclick = openInvite;
+$('copyLinkBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText(inviteUrl()); toast('Link copied'); }
+  catch { toast(inviteUrl()); }
 };
+$('shareLinkBtn').onclick = async () => {
+  try { await navigator.share({ title: 'Join my MyTurn room', text: `Room code ${room.code}`, url: inviteUrl() }); } catch {}
+};
+// Tap outside the sheet to close it
+$('inviteDialog').addEventListener('click', (e) => { if (e.target === $('inviteDialog')) $('inviteDialog').close(); });
 
 $('meBtn').onclick = () => {
   $('dialogName').value = myName;

@@ -23,7 +23,7 @@ After pulling a new version, run `docker compose up -d --build` again.
 
 ## Features
 
-- **Rooms**: create one to get a 4-letter code; others join with the code or the shared link (`/ABCD`).
+- **Rooms**: create one to get a 4-letter code; others join with the code, the shared link (`/ABCD`), or by scanning the **invite QR code** (tap the room code or "Invite players").
 - **Seating order**: the host moves players up/down, shuffles, or removes them. Late joiners sit at the end.
 - **Turn button**: enabled only on the current player's phone. Double taps can't skip anyone.
 - **Host controls**: Skip the current player, go back one turn, give the turn to anyone (▶), end the game.
@@ -42,5 +42,7 @@ will work for playing, but won't stay awake or install.
 Options:
 - Quick test from your laptop: `npx cloudflared tunnel --url http://localhost:3000` gives you an https URL.
 - Put the Docker container behind a reverse proxy with TLS (Caddy, Traefik, nginx; it must pass WebSocket upgrades), or host it on any Node host that supports WebSockets (Render, Fly.io, Railway, a VPS behind Caddy/nginx).
+
+QR codes are drawn on the phone with the vendored [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT), so no CDN is needed.
 
 Rooms live in server memory: restarting the server ends all games. Empty rooms are cleaned up after an hour.
