@@ -1,6 +1,6 @@
 {
   "name": "myturn",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Turn tracker for board games: everyone's phone, one glowing button.",
   "main": "server.js",
   "type": "commonjs",

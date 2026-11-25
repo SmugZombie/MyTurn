@@ -57,6 +57,9 @@ function handle(msg) {
     case 'summary':
       showSummary(msg.summary);
       break;
+    case 'welcome':
+      checkBuild(msg.build);
+      break;
     case 'notice':
       toast(msg.message);
       break;
@@ -234,6 +237,29 @@ function mini(label, title, onclick, disabled) {
   return b;
 }
 
+// ---------- dialogs (with a fallback for browsers without <dialog>, e.g. iOS < 15.4) ----------
+const nativeDialog = typeof HTMLDialogElement === 'function' && 'showModal' in HTMLDialogElement.prototype;
+function openDialog(d) {
+  if (d.open || d.hasAttribute('open')) return;
+  if (nativeDialog) d.showModal();
+  else d.setAttribute('open', '');
+}
+function closeDialog(d, value = '') {
+  if (nativeDialog) return d.close(value);
+  d.returnValue = value;
+  d.removeAttribute('open');
+  d.dispatchEvent(new Event('close'));
+}
+if (!nativeDialog) {
+  document.documentElement.classList.add('no-dialog');
+  document.querySelectorAll('dialog form[method="dialog"]').forEach((f) => {
+    f.addEventListener('submit', (e) => {
+      e.preventDefault();
+      closeDialog(f.closest('dialog'), e.submitter ? e.submitter.value : '');
+    });
+  });
+}
+
 // ---------- feedback ----------
 let toastTimer;
 function toast(text) {
@@ -378,7 +404,7 @@ function showSummary(s) {
     if (anySkips) tr.append(el('td', 'num muted', p.skips || '–'));
     return tr;
   }));
-  if (!$('summaryDialog').open) $('summaryDialog').showModal();
+  openDialog($('summaryDialog'));
 }
 $('resultsBtn').onclick = () => showSummary(room && room.lastSummary);
 
@@ -397,7 +423,7 @@ function openInvite() {
     $('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
   } catch { $('qr').textContent = 'Could not draw QR code'; }
   $('shareLinkBtn').classList.toggle('hidden', !navigator.share);
-  $('inviteDialog').showModal();
+  openDialog($('inviteDialog'));
 }
 $('codeBtn').onclick = openInvite;
 $('inviteBtn').onclick = openInvite;
@@ -409,11 +435,11 @@ $('shareLinkBtn').onclick = async () => {
   try { await navigator.share({ title: 'Join my MyTurn room', text: `Room code ${room.code}`, url: inviteUrl() }); } catch {}
 };
 // Tap outside the sheet to close it
-$('inviteDialog').addEventListener('click', (e) => { if (e.target === $('inviteDialog')) $('inviteDialog').close(); });
+$('inviteDialog').addEventListener('click', (e) => { if (e.target === $('inviteDialog')) closeDialog($('inviteDialog')); });
 
 $('meBtn').onclick = () => {
   $('dialogName').value = myName;
-  $('nameDialog').showModal();
+  openDialog($('nameDialog'));
 };
 $('nameDialog').addEventListener('close', () => {
   const v = $('dialogName').value.trim();
@@ -439,7 +465,7 @@ $('newBtnInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') add
 document.querySelectorAll('[data-preset]').forEach((b) => { b.onclick = () => addButton(b.dataset.preset); });
 
 // Hard refresh: drop the service worker + caches so the newest version loads.
-$('refreshBtn').onclick = async () => {
+async function hardRefresh() {
   $('refreshBtn').textContent = 'Refreshing…';
   try {
     if ('serviceWorker' in navigator) {
@@ -452,7 +478,28 @@ $('refreshBtn').onclick = async () => {
     }
   } catch {}
   location.replace(location.pathname + '?v=' + Date.now()); // bypass HTTP cache too
-};
+}
+$('refreshBtn').onclick = hardRefresh;
+
+// Auto-update: the server tells us its build on connect. If this page is older
+// (the server was redeployed while the phone was open), reload onto the new version.
+const PAGE_BUILD = document.querySelector('meta[name="app-build"]')?.content;
+const PAGE_VERSION = document.querySelector('meta[name="app-version"]')?.content;
+// Shown next to Refresh so players can compare with the host. Same build id = same code.
+$('version').textContent = `v${PAGE_VERSION} · ${(PAGE_BUILD || '').slice(0, 7)}`;
+function checkBuild(serverBuild) {
+  if (!serverBuild || !PAGE_BUILD || serverBuild === PAGE_BUILD) return;
+  let tried = null;
+  try { tried = sessionStorage.getItem('myturn.updatedTo'); } catch {}
+  if (tried === serverBuild) { // already tried once for this build; don't loop, just flag it
+    $('version').textContent += ' · update available';
+    $('version').classList.add('stale');
+    return;
+  }
+  try { sessionStorage.setItem('myturn.updatedTo', serverBuild); } catch {}
+  toast('Updating to the latest version…');
+  setTimeout(hardRefresh, 600);
+}
 
 // ---------- boot ----------
 $('nameInput').value = myName;

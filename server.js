@@ -3,6 +3,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 3000;
@@ -19,6 +20,19 @@ const MIME = {
   '.json': 'application/json',
 };
 
+// Build id = hash of everything in public/. It changes on every deploy that changes
+// the app, so phones still running an older page know to reload themselves.
+function hashDir(dir, h = crypto.createHash('sha1')) {
+  for (const name of fs.readdirSync(dir).sort()) {
+    const full = path.join(dir, name);
+    if (fs.statSync(full).isDirectory()) hashDir(full, h);
+    else h.update(name).update(fs.readFileSync(full));
+  }
+  return h;
+}
+const BUILD = hashDir(PUBLIC_DIR).digest('hex').slice(0, 10);
+const VERSION = require('./package.json').version;
+
 // ---------- static file server ----------
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
@@ -28,6 +42,7 @@ const server = http.createServer((req, res) => {
   if (!full.startsWith(PUBLIC_DIR)) { res.writeHead(403); return res.end(); }
   fs.readFile(full, (err, data) => {
     if (err) { res.writeHead(404); return res.end('Not found'); }
+    if (full.endsWith('index.html')) data = data.toString().replace('__BUILD__', BUILD).replace('__VERSION__', VERSION);
     res.writeHead(200, {
       'Content-Type': MIME[path.extname(full)] || 'application/octet-stream',
       'Cache-Control': 'no-cache',
@@ -154,6 +169,7 @@ wss.on('connection', (ws) => {
       ws.name = clean(msg.name) || 'Player';
       if (!sockets.has(id)) sockets.set(id, new Set());
       sockets.get(id).add(ws);
+      ws.send(JSON.stringify({ type: 'welcome', build: BUILD }));
       return;
     }
     if (!ws.clientId) return;
@@ -332,4 +348,4 @@ setInterval(() => {
   }
 }, 30000);
 
-server.listen(PORT, () => console.log(`MyTurn running on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`MyTurn v${VERSION} (build ${BUILD}) running on http://localhost:${PORT}`));

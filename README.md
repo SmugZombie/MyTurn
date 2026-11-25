@@ -32,6 +32,8 @@ After pulling a new version, run `docker compose up -d --build` again.
 - **Game over summary**: when the host ends the game, every phone shows each player's turn count (most turns highlighted), skips, total turns and game length. "📊 Last game" in the lobby reopens it. Skips don't count as turns, and "Previous" takes back the turn or skip it undoes.
 - **Keeps the screen awake** using the Screen Wake Lock API.
 - **Name saved** in the browser and reused next time. Reloading or a dropped connection puts you back in your seat.
+- **Auto-update**: each deploy gets a build id (a hash of `public/`). Phones that were open during a redeploy notice the newer build when they reconnect and reload themselves onto it.
+- **Version label** next to Refresh (e.g. `v1.1.0 · 0f9fdad`): the package version plus the build id. Phones showing the same build id run the same code; it turns amber with "update available" if a phone couldn't update itself.
 - **↻ Refresh app** (bottom of every screen) clears the service worker and cache and reloads, so phones pick up a new version. You land back in your room.
 - **Installable PWA**: "Add to Home Screen" on iOS or "Install app" on Android.
 
