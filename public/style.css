@@ -38,7 +38,7 @@ input {
   padding: 14px 16px; font: inherit; font-size: 18px;
 }
 input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-#codeInput { text-transform: uppercase; letter-spacing: 6px; text-align: center; font-weight: 700; }
+#codeInput, .code-input { text-transform: uppercase; letter-spacing: 4px; text-align: center; font-weight: 700; }
 
 .row { display: flex; gap: 10px; }
 .row > .btn { flex: 0 0 auto; }
@@ -151,7 +151,7 @@ dialog .row .btn { flex: 1; }
 .link-btn { background: none; border: 0; color: var(--muted); font: inherit; font-size: 13px; padding: 10px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
 /* Invite */
-.invite-btn { display: block; margin: 0 auto 8px; }
+.lobby-actions { display: flex; gap: 10px; justify-content: center; margin-bottom: 8px; }
 dialog.invite { text-align: center; }
 .invite-head { display: flex; flex-direction: column; gap: 2px; }
 .invite-head b { font-size: 36px; letter-spacing: 8px; padding-left: 8px; }
@@ -159,3 +159,45 @@ dialog.invite { text-align: center; }
 .qr svg { display: block; width: 100%; height: auto; }
 .invite-url { color: var(--muted); font-size: 14px; word-break: break-all; }
 .btn.on { border-color: var(--accent); color: var(--accent); }
+
+/* Game over summary */
+dialog.summary h2 { margin: 0 0 4px; font-size: 26px; }
+.stats { width: 100%; border-collapse: collapse; }
+.stats th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; padding: 0 4px 8px; }
+.stats th:not(:first-child), .stats .num { text-align: right; width: 72px; }
+.stats td { padding: 10px 4px; border-top: 1px solid var(--line); }
+.stats .pname { max-width: 0; }
+.stats .num { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 18px; }
+.stats .num.best { color: var(--accent); }
+
+/* Reactions */
+.react-bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.react-bar button {
+  background: var(--panel); border: 1px solid var(--line); color: var(--text);
+  border-radius: 99px; min-width: 48px; height: 48px; padding: 0 12px;
+  font: inherit; font-size: 22px; cursor: pointer;
+}
+.react-bar button:active { transform: scale(.9); }
+.react-bar .hurry { font-size: 15px; font-weight: 600; }
+.reaction {
+  position: fixed; left: 50%; top: 45%; z-index: 25; pointer-events: none;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: rgba(31, 34, 40, .94); border: 1px solid var(--line); border-radius: 24px;
+  padding: 18px 28px; min-width: 140px; text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .5);
+  animation: pop 1.5s ease-out forwards;
+}
+.reaction span { font-size: 72px; line-height: 1; }
+.reaction b { font-size: 22px; }
+.reaction b:empty { display: none; }
+.reaction small { color: var(--muted); font-size: 15px; }
+.reaction.urgent { border-color: #ffb020; animation-duration: 2.2s; }
+.reaction.urgent b { color: #ffb020; font-size: 28px; }
+@keyframes pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  20% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
+}

@@ -23,10 +23,15 @@
       <span>Your name</span>
       <input id="nameInput" maxlength="24" autocomplete="nickname" placeholder="e.g. Sam">
     </label>
+    <label id="customCodeField" class="field hidden">
+      <span>Your room code (3–8 letters or numbers)</span>
+      <input id="customCodeInput" class="code-input" maxlength="8" placeholder="e.g. CATAN" autocapitalize="characters" autocomplete="off" spellcheck="false">
+    </label>
     <button id="createBtn" class="btn primary">Create a room</button>
+    <button id="customCodeToggle" class="link-btn">Pick your own room code</button>
     <div class="or">or join one</div>
     <div class="row">
-      <input id="codeInput" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false">
+      <input id="codeInput" class="code-input" maxlength="8" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false">
       <button id="joinBtn" class="btn">Join</button>
     </div>
   </section>
@@ -40,7 +45,10 @@
     </header>
 
     <div id="status" class="status"></div>
-    <button id="inviteBtn" class="btn invite-btn hidden">▦ Invite players</button>
+    <div class="lobby-actions">
+      <button id="inviteBtn" class="btn hidden">▦ Invite players</button>
+      <button id="resultsBtn" class="btn hidden">📊 Last game</button>
+    </div>
 
     <!-- The one big button -->
     <div id="turnWrap" class="turn-wrap hidden">
@@ -49,6 +57,13 @@
         <small id="turnSub"></small>
       </button>
       <div id="customBtns" class="custom-btns"></div>
+      <div id="reactBar" class="react-bar">
+        <button data-react="up" aria-label="Thumbs up">👍</button>
+        <button data-react="down" aria-label="Thumbs down">👎</button>
+        <button data-react="laugh" aria-label="Laugh">😂</button>
+        <button data-react="wow" aria-label="Wow">😮</button>
+        <button data-react="hurry" class="hurry" aria-label="Hurry up">⏰ Hurry up</button>
+      </div>
     </div>
 
     <h2 class="section-title"><span>Seating order</span> <span id="playerCount" class="muted"></span></h2>
@@ -86,6 +101,7 @@
   </footer>
 
   <!-- Overlays -->
+  <div id="reaction" class="reaction hidden" aria-live="polite"><span id="reactionEmoji"></span><b id="reactionText"></b><small id="reactionFrom"></small></div>
   <div id="announce" class="announce hidden"><div><b id="announceName"></b><span id="announceLabel"></span></div></div>
   <div id="toast" class="toast hidden"></div>
   <div id="conn" class="conn hidden">Reconnecting…</div>
@@ -100,6 +116,17 @@
         <button type="button" id="shareLinkBtn" class="btn primary">Share…</button>
       </div>
       <button value="close" class="btn">Close</button>
+    </form>
+  </dialog>
+
+  <dialog id="summaryDialog" class="summary">
+    <form method="dialog">
+      <div><h2>Game over</h2><div id="summaryMeta" class="muted small"></div></div>
+      <table class="stats">
+        <thead><tr><th>Player</th><th>Turns</th><th id="skipsHead">Skipped</th></tr></thead>
+        <tbody id="summaryRows"></tbody>
+      </table>
+      <button value="close" class="btn primary">Done</button>
     </form>
   </dialog>
 

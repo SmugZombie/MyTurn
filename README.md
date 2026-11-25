@@ -23,11 +23,13 @@ After pulling a new version, run `docker compose up -d --build` again.
 
 ## Features
 
-- **Rooms**: create one to get a 4-letter code; others join with the code, the shared link (`/ABCD`), or by scanning the **invite QR code** (tap the room code or "Invite players").
+- **Rooms**: create one to get a random 4-letter code, or tap "Pick your own room code" to choose one (3–8 letters/numbers, e.g. `CATAN`; refused if a room with that code already exists); others join with the code, the shared link (`/CODE`), or by scanning the **invite QR code** (tap the room code or "Invite players").
 - **Seating order**: the host moves players up/down, shuffles, or removes them. Late joiners sit at the end.
 - **Turn button**: enabled only on the current player's phone. Double taps can't skip anyone.
 - **Host controls**: Skip the current player, go back one turn, **reverse the turn order** (⇄, play flips direction around the table; seats stay put), give the turn to anyone (▶), end the game.
 - **Extra buttons**: the host adds or removes buttons like "I win! 🏆" that every player sees. Pressing one shows a full-screen announcement on every phone.
+- **Reactions**: during a game anyone can send 👍 👎 😂 😮 or ⏰ "Hurry up". It pops up briefly in the middle of every phone with the sender's name. Hurry up names the current player and buzzes their phone (you can't hurry yourself). Rate-limited so nobody can spam the table.
+- **Game over summary**: when the host ends the game, every phone shows each player's turn count (most turns highlighted), skips, total turns and game length. "📊 Last game" in the lobby reopens it. Skips don't count as turns, and "Previous" takes back the turn or skip it undoes.
 - **Keeps the screen awake** using the Screen Wake Lock API.
 - **Name saved** in the browser and reused next time. Reloading or a dropped connection puts you back in your seat.
 - **↻ Refresh app** (bottom of every screen) clears the service worker and cache and reloads, so phones pick up a new version. You land back in your room.

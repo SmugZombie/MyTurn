@@ -54,8 +54,14 @@ function handle(msg) {
       history.replaceState(null, '', '/' + roomCode);
       render();
       break;
+    case 'summary':
+      showSummary(msg.summary);
+      break;
     case 'notice':
       toast(msg.message);
+      break;
+    case 'react':
+      showReaction(msg);
       break;
     case 'announce':
       showAnnounce(msg.name, msg.label);
@@ -132,6 +138,7 @@ function render() {
   }
 
   $('inviteBtn').classList.toggle('hidden', room.started);
+  $('resultsBtn').classList.toggle('hidden', room.started || !room.lastSummary);
 
   // Big button
   $('turnWrap').classList.toggle('hidden', !room.started);
@@ -148,6 +155,7 @@ function render() {
     }
   }
   document.body.classList.toggle('my-turn', !!myTurn);
+  $('reactBar').querySelector('.hurry').classList.toggle('hidden', !!myTurn); // can't rush yourself
   if (myTurn && !wasMyTurn) buzz();
   wasMyTurn = !!myTurn;
 
@@ -235,6 +243,27 @@ function toast(text) {
   toastTimer = setTimeout(() => $('toast').classList.add('hidden'), 2500);
 }
 
+// Quick reactions: a short, non-blocking popover in the middle of the screen.
+const REACTION_EMOJI = { up: '👍', down: '👎', laugh: '😂', wow: '😮', hurry: '⏰' };
+let reactionTimer;
+function showReaction({ key, name, fromId, targetId, targetName }) {
+  const box = $('reaction');
+  const forMe = key === 'hurry' && targetId === clientId;
+  $('reactionEmoji').textContent = REACTION_EMOJI[key] || '❔';
+  $('reactionText').textContent = key === 'hurry' ? (forMe ? 'Hurry up!' : `Hurry up, ${targetName}!`) : '';
+  $('reactionFrom').textContent = fromId === clientId ? 'you' : name;
+  box.classList.toggle('urgent', forMe);
+  box.classList.add('hidden');
+  void box.offsetWidth; // restart the pop animation if one is already showing
+  box.classList.remove('hidden');
+  if (forMe && navigator.vibrate) navigator.vibrate([120, 60, 120, 60, 120]);
+  clearTimeout(reactionTimer);
+  reactionTimer = setTimeout(() => box.classList.add('hidden'), forMe ? 2200 : 1500);
+}
+document.querySelectorAll('[data-react]').forEach((b) => {
+  b.onclick = () => send({ type: 'react', key: b.dataset.react });
+});
+
 let announceTimer;
 function showAnnounce(name, label) {
   $('announceName').textContent = name;
@@ -287,21 +316,33 @@ document.addEventListener('pointerdown', () => {
 // ---------- events ----------
 $('nameInput').addEventListener('change', (e) => { if (e.target.value.trim()) setName(e.target.value); });
 
+const CODE_RE = /^[A-Z0-9]{3,8}$/;
+const cleanCode = (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+
 $('createBtn').onclick = () => {
   if (!requireName()) return;
-  send({ type: 'create' });
+  const custom = $('customCodeField').classList.contains('hidden') ? '' : cleanCode($('customCodeInput').value);
+  if (custom && !CODE_RE.test(custom)) { $('customCodeInput').focus(); return toast('Codes are 3–8 letters or numbers'); }
+  send({ type: 'create', code: custom || undefined }); // server refuses codes already in use
 };
+$('customCodeToggle').onclick = () => {
+  const show = $('customCodeField').classList.toggle('hidden') === false;
+  $('customCodeToggle').textContent = show ? 'Use a random code instead' : 'Pick your own room code';
+  if (show) $('customCodeInput').focus(); else $('customCodeInput').value = '';
+};
+$('customCodeInput').addEventListener('input', (e) => { e.target.value = cleanCode(e.target.value); });
+$('customCodeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('createBtn').click(); });
 
 function join() {
   const code = $('codeInput').value.trim().toUpperCase();
   if (!requireName()) return;
-  if (code.length !== 4) { $('codeInput').focus(); return toast('Enter the 4-letter room code'); }
+  if (!CODE_RE.test(code)) { $('codeInput').focus(); return toast('Enter the room code'); }
   roomCode = code;
   send({ type: 'join', code });
 }
 $('joinBtn').onclick = join;
 $('codeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
-$('codeInput').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); });
+$('codeInput').addEventListener('input', (e) => { e.target.value = cleanCode(e.target.value); });
 
 $('turnBtn').onclick = () => {
   if ($('turnBtn').disabled) return;
@@ -314,6 +355,32 @@ $('leaveBtn').onclick = () => {
   send({ type: 'leave' });
   exitRoom();
 };
+
+// ---------- end-of-game summary ----------
+function fmtDuration(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 1) return 'under a minute';
+  if (m < 60) return `${m} min`;
+  return `${Math.floor(m / 60)} h ${m % 60} min`;
+}
+function showSummary(s) {
+  if (!s) return;
+  const anySkips = s.players.some((p) => p.skips > 0);
+  const top = Math.max(0, ...s.players.map((p) => p.turns));
+  $('summaryMeta').textContent = `${s.totalTurns} turns · ${fmtDuration(s.durationMs)}`;
+  $('skipsHead').classList.toggle('hidden', !anySkips);
+  $('summaryRows').replaceChildren(...s.players.map((p) => {
+    const tr = document.createElement('tr');
+    const name = el('td', 'pname', p.name);
+    if (p.left) name.append(el('em', '', 'left'));
+    const turns = el('td', 'num' + (p.turns === top && top > 0 ? ' best' : ''), p.turns);
+    tr.append(name, turns);
+    if (anySkips) tr.append(el('td', 'num muted', p.skips || '–'));
+    return tr;
+  }));
+  if (!$('summaryDialog').open) $('summaryDialog').showModal();
+}
+$('resultsBtn').onclick = () => showSummary(room && room.lastSummary);
 
 // ---------- invite (QR + link) ----------
 const inviteUrl = () => `${location.origin}/${room.code}`;
@@ -390,8 +457,9 @@ $('refreshBtn').onclick = async () => {
 // ---------- boot ----------
 $('nameInput').value = myName;
 const urlCode = location.pathname.slice(1).toUpperCase();
-if (/^[A-Z]{4}$/.test(urlCode)) $('codeInput').value = urlCode;
-const resume = /^[A-Z]{4}$/.test(urlCode) ? urlCode : store.get('room');
+const urlHasCode = /^[A-Z0-9]{3,8}$/.test(urlCode);
+if (urlHasCode) $('codeInput').value = urlCode;
+const resume = urlHasCode ? urlCode : store.get('room');
 if (myName && resume) roomCode = resume; // jump straight back into the room
 else if (!myName) $('nameInput').focus();
 connect();

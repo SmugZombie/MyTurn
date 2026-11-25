@@ -42,6 +42,9 @@ const rooms = new Map();
 /** clientId -> Set<ws> (a phone may briefly have two sockets while reconnecting) */
 const sockets = new Map();
 
+const REACTIONS = ['up', 'down', 'laugh', 'wow', 'hurry'];
+const REACT_COOLDOWN_MS = 600;
+const CODE_RE = /^[A-Z0-9]{3,8}$/; // what a room code may look like (custom or generated)
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O to avoid confusion
 function newCode() {
   let code;
@@ -62,7 +65,37 @@ function publicState(room) {
     direction: room.direction,
     current: room.current,
     buttons: room.buttons,
+    lastSummary: room.lastSummary || null,
     players: room.players.map((p) => ({ id: p.id, name: p.name, online: isOnline(p.id) })),
+  };
+}
+
+// ---------- per-game turn stats ----------
+// stats: id -> { name, turns, skips }. log: what each advance did, so "Previous" can undo it.
+function stat(room, id) {
+  const p = room.players.find((x) => x.id === id);
+  if (!room.stats[id]) room.stats[id] = { name: p ? p.name : 'Player', turns: 0, skips: 0 };
+  if (p) room.stats[id].name = p.name;
+  return room.stats[id];
+}
+function record(room, id, kind) { // kind: 'turns' | 'skips'
+  stat(room, id)[kind]++;
+  room.log.push({ id, kind });
+  if (room.log.length > 200) room.log.shift();
+}
+function buildSummary(room) {
+  const seated = room.players.map((p) => p.id);
+  const gone = Object.keys(room.stats).filter((id) => !seated.includes(id));
+  const players = [...seated, ...gone].map((id) => {
+    const s = stat(room, id);
+    return { name: s.name, turns: s.turns, skips: s.skips, left: gone.includes(id) };
+  });
+  return {
+    id: Date.now().toString(36),
+    endedAt: Date.now(),
+    durationMs: Date.now() - room.startedAt,
+    totalTurns: players.reduce((n, p) => n + p.turns, 0),
+    players,
   };
 }
 
@@ -127,7 +160,13 @@ wss.on('connection', (ws) => {
     const me = ws.clientId;
 
     if (msg.type === 'create') {
-      const code = newCode();
+      let code = newCode();
+      if (msg.code) { // host picked their own code
+        const wanted = String(msg.code).toUpperCase();
+        if (!CODE_RE.test(wanted)) return err('Codes are 3–8 letters or numbers');
+        if (rooms.has(wanted)) return err(`Room ${wanted} is already in use. Pick another code`);
+        code = wanted;
+      }
       const room = { code, adminId: me, players: [{ id: me, name: ws.name }], started: false, current: 0, direction: 1, buttons: [], touched: Date.now() };
       rooms.set(code, room);
       ws.roomCode = code;
@@ -166,6 +205,7 @@ wss.on('connection', (ws) => {
       case 'done': // the current player ends their turn
         if (!room.started || me !== currentId) return;
         if (msg.turnOf && msg.turnOf !== me) return;
+        record(room, me, 'turns');
         advance(room, 1);
         return sync(room);
       case 'press': { // a custom button like "I win"
@@ -173,6 +213,16 @@ wss.on('connection', (ws) => {
         const p = room.players.find((x) => x.id === me);
         if (!b || !p) return;
         return broadcast(room, { type: 'announce', name: p.name, label: b.label });
+      }
+      case 'react': { // quick emoji popover on everyone's screen
+        const p = room.players.find((x) => x.id === me);
+        if (!p || !REACTIONS.includes(msg.key)) return;
+        const now = Date.now();
+        if (now - (ws.lastReact || 0) < REACT_COOLDOWN_MS) return;
+        ws.lastReact = now;
+        const target = msg.key === 'hurry' && room.started ? room.players[room.current] : null;
+        if (msg.key === 'hurry' && (!target || target.id === me)) return;
+        return broadcast(room, { type: 'react', key: msg.key, name: p.name, fromId: me, targetId: target?.id, targetName: target?.name });
       }
     }
 
@@ -205,6 +255,10 @@ wss.on('connection', (ws) => {
         return sync(room);
       case 'start': {
         room.started = true;
+        room.startedAt = Date.now();
+        room.stats = {};
+        room.log = [];
+        for (const p of room.players) stat(room, p.id);
         const first = room.players.findIndex((p) => p.id === msg.firstId);
         room.current = first >= 0 ? first : 0;
         return sync(room);
@@ -214,22 +268,35 @@ wss.on('connection', (ws) => {
         sync(room);
         return broadcast(room, { type: 'notice', message: 'Turn order reversed ⇄' });
       }
-      case 'stop':
+      case 'stop': {
+        if (!room.started) return;
+        room.lastSummary = buildSummary(room);
         room.started = false;
         room.current = 0;
-        return sync(room);
+        sync(room);
+        return broadcast(room, { type: 'summary', summary: room.lastSummary });
+      }
       case 'skip':
         if (!room.started) return;
+        record(room, currentId, 'skips');
         advance(room, 1);
         return sync(room);
-      case 'back':
+      case 'back': { // undo: the player we return to gets that turn/skip taken back
         if (!room.started) return;
         advance(room, -1);
+        const last = room.log[room.log.length - 1];
+        const backTo = room.players[room.current]?.id;
+        if (last && last.id === backTo) {
+          room.log.pop();
+          stat(room, backTo)[last.kind] = Math.max(0, stat(room, backTo)[last.kind] - 1);
+        }
         return sync(room);
+      }
       case 'setTurn': {
         const i = room.players.findIndex((p) => p.id === msg.playerId);
         if (!room.started || i < 0) return;
         room.current = i;
+        room.log = []; // jumping around: nothing sensible to undo
         return sync(room);
       }
       case 'addButton': {
