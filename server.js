@@ -59,6 +59,7 @@ function publicState(room) {
     code: room.code,
     adminId: room.adminId,
     started: room.started,
+    direction: room.direction,
     current: room.current,
     buttons: room.buttons,
     players: room.players.map((p) => ({ id: p.id, name: p.name, online: isOnline(p.id) })),
@@ -79,7 +80,9 @@ function sync(room) {
   broadcast(room, { type: 'state', room: publicState(room) });
 }
 
+// step is +1 for "next in play order", -1 for "previous"; direction flips both.
 function advance(room, step = 1) {
+  step *= room.direction;
   const n = room.players.length;
   if (!n) { room.current = 0; return; }
   room.current = (((room.current + step) % n) + n) % n;
@@ -125,7 +128,7 @@ wss.on('connection', (ws) => {
 
     if (msg.type === 'create') {
       const code = newCode();
-      const room = { code, adminId: me, players: [{ id: me, name: ws.name }], started: false, current: 0, buttons: [], touched: Date.now() };
+      const room = { code, adminId: me, players: [{ id: me, name: ws.name }], started: false, current: 0, direction: 1, buttons: [], touched: Date.now() };
       rooms.set(code, room);
       ws.roomCode = code;
       return sync(room);
@@ -205,6 +208,11 @@ wss.on('connection', (ws) => {
         const first = room.players.findIndex((p) => p.id === msg.firstId);
         room.current = first >= 0 ? first : 0;
         return sync(room);
+      }
+      case 'reverse': {
+        room.direction = -room.direction;
+        sync(room);
+        return broadcast(room, { type: 'notice', message: 'Turn order reversed ⇄' });
       }
       case 'stop':
         room.started = false;

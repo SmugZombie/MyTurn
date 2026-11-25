@@ -158,3 +158,4 @@ dialog.invite { text-align: center; }
 .qr { background: #fff; border-radius: 12px; padding: 10px; width: min(72vw, 280px); margin: 0 auto; }
 .qr svg { display: block; width: 100%; height: auto; }
 .invite-url { color: var(--muted); font-size: 14px; word-break: break-all; }
+.btn.on { border-color: var(--accent); color: var(--accent); }

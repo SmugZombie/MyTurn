@@ -54,6 +54,9 @@ function handle(msg) {
       history.replaceState(null, '', '/' + roomCode);
       render();
       break;
+    case 'notice':
+      toast(msg.message);
+      break;
     case 'announce':
       showAnnounce(msg.name, msg.label);
       break;
@@ -115,16 +118,17 @@ function render() {
   const isHost = room.adminId === clientId;
   const meIdx = players.findIndex((p) => p.id === clientId);
   const cur = players[room.current];
-  const nextIdx = n ? (room.current + 1) % n : -1;
+  const dir = room.direction || 1;
+  const nextIdx = n ? (((room.current + dir) % n) + n) % n : -1;
   const myTurn = room.started && cur && cur.id === clientId;
 
   // Status line
   if (!room.started) {
     $('status').textContent = isHost
-      ? (n < 2 ? 'Share the room code so others can join' : 'Arrange the seats, then start')
+      ? (n < 2 ? 'Share the room code so others can join' : `Arrange the seats, then start${dir < 0 ? ' (play goes ↑ up the list)' : ''}`)
       : 'Waiting for the host to start…';
   } else {
-    $('status').textContent = n > 1 ? `Next up: ${players[nextIdx].name}` : '';
+    $('status').textContent = n > 1 ? `Next up: ${players[nextIdx].name}${dir < 0 ? '  ·  ⇄ reversed' : ''}` : '';
   }
 
   $('inviteBtn').classList.toggle('hidden', room.started);
@@ -139,7 +143,7 @@ function render() {
       $('turnSub').textContent = 'Tap when you’re done';
     } else {
       $('turnLabel').textContent = `${cur.name}’s turn`;
-      const wait = meIdx < 0 ? -1 : (meIdx - room.current + n) % n;
+      const wait = meIdx < 0 ? -1 : (((meIdx - room.current) * dir) % n + n) % n;
       $('turnSub').textContent = wait === 1 ? 'You’re up next' : wait > 1 ? `${wait} turns until you` : '';
     }
   }
@@ -194,6 +198,7 @@ function render() {
     $('lobbyCtrls').classList.toggle('hidden', room.started);
     $('gameCtrls').classList.toggle('hidden', !room.started);
     $('startBtn').disabled = n < 1;
+    for (const b of [$('reverseBtn'), $('reverseBtn2')]) b.classList.toggle('on', dir < 0);
     $('btnList').replaceChildren(...(room.buttons.length
       ? room.buttons.map((b) => {
         const c = el('button', 'chip', b.label);
@@ -352,6 +357,8 @@ $('startBtn').onclick = () => send({ type: 'start' });
 $('shuffleBtn').onclick = () => send({ type: 'shuffle' });
 $('skipBtn').onclick = () => send({ type: 'skip' });
 $('backBtn').onclick = () => send({ type: 'back' });
+$('reverseBtn').onclick = () => send({ type: 'reverse' });
+$('reverseBtn2').onclick = () => send({ type: 'reverse' });
 $('stopBtn').onclick = () => { if (confirm('End the game for everyone?')) send({ type: 'stop' }); };
 
 function addButton(label) {

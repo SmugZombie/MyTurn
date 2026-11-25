@@ -26,7 +26,7 @@ After pulling a new version, run `docker compose up -d --build` again.
 - **Rooms**: create one to get a 4-letter code; others join with the code, the shared link (`/ABCD`), or by scanning the **invite QR code** (tap the room code or "Invite players").
 - **Seating order**: the host moves players up/down, shuffles, or removes them. Late joiners sit at the end.
 - **Turn button**: enabled only on the current player's phone. Double taps can't skip anyone.
-- **Host controls**: Skip the current player, go back one turn, give the turn to anyone (▶), end the game.
+- **Host controls**: Skip the current player, go back one turn, **reverse the turn order** (⇄, play flips direction around the table; seats stay put), give the turn to anyone (▶), end the game.
 - **Extra buttons**: the host adds or removes buttons like "I win! 🏆" that every player sees. Pressing one shows a full-screen announcement on every phone.
 - **Keeps the screen awake** using the Screen Wake Lock API.
 - **Name saved** in the browser and reused next time. Reloading or a dropped connection puts you back in your seat.
