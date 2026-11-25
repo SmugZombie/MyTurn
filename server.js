@@ -42,10 +42,19 @@ const server = http.createServer((req, res) => {
   if (!full.startsWith(PUBLIC_DIR)) { res.writeHead(403); return res.end(); }
   fs.readFile(full, (err, data) => {
     if (err) { res.writeHead(404); return res.end('Not found'); }
-    if (full.endsWith('index.html')) data = data.toString().replace('__BUILD__', BUILD).replace('__VERSION__', VERSION);
+    const isHtml = full.endsWith('index.html');
+    if (isHtml) {
+      data = data.toString()
+        .replace('__BUILD__', BUILD)
+        .replace('__VERSION__', VERSION)
+        // Pin scripts/styles to this build so a page can never run with a stale cached
+        // app.js (iOS home-screen apps and proxies are prone to that).
+        .replace(/(src|href)="\/(app\.js|style\.css|vendor\/qrcode\.js)"/g, `$1="/$2?v=${BUILD}"`);
+    }
     res.writeHead(200, {
       'Content-Type': MIME[path.extname(full)] || 'application/octet-stream',
-      'Cache-Control': 'no-cache',
+      // The page and service worker must always be fresh; assets are versioned via ?v=
+      'Cache-Control': isHtml || full.endsWith('sw.js') ? 'no-store' : 'no-cache',
     });
     res.end(data);
   });
