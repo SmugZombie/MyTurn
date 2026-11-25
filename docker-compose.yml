@@ -1,0 +1,8 @@
+services:
+  myturn:
+    build: .
+    image: myturn:latest
+    container_name: myturn
+    restart: unless-stopped
+    ports:
+      - "${MYTURN_PORT:-3000}:3000"

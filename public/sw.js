@@ -1,6 +1,6 @@
 // Network-first service worker: the app always tries for fresh files,
 // and falls back to the cached shell when offline (the game itself needs a connection).
-const CACHE = 'myturn-v1';
+const CACHE = 'myturn-v2';
 const SHELL = ['/', '/index.html', '/style.css', '/app.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {

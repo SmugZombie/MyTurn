@@ -12,6 +12,15 @@ npm install
 npm start            # http://localhost:3000  (PORT env var to change)
 ```
 
+### Docker
+
+```bash
+docker compose up -d --build          # serves on port 3000
+MYTURN_PORT=8080 docker compose up -d # or pick another host port
+```
+
+After pulling a new version, run `docker compose up -d --build` again.
+
 ## Features
 
 - **Rooms**: create one to get a 4-letter code; others join with the code or the shared link (`/ABCD`).
@@ -21,6 +30,7 @@ npm start            # http://localhost:3000  (PORT env var to change)
 - **Extra buttons**: the host adds or removes buttons like "I win! 🏆" that every player sees. Pressing one shows a full-screen announcement on every phone.
 - **Keeps the screen awake** using the Screen Wake Lock API.
 - **Name saved** in the browser and reused next time. Reloading or a dropped connection puts you back in your seat.
+- **↻ Refresh app** (bottom of every screen) clears the service worker and cache and reloads, so phones pick up a new version. You land back in your room.
 - **Installable PWA**: "Add to Home Screen" on iOS or "Install app" on Android.
 
 ## Deploying (phones need HTTPS)
@@ -31,6 +41,6 @@ will work for playing, but won't stay awake or install.
 
 Options:
 - Quick test from your laptop: `npx cloudflared tunnel --url http://localhost:3000` gives you an https URL.
-- Host it on any Node host that supports WebSockets (Render, Fly.io, Railway, a VPS behind Caddy/nginx).
+- Put the Docker container behind a reverse proxy with TLS (Caddy, Traefik, nginx; it must pass WebSocket upgrades), or host it on any Node host that supports WebSockets (Render, Fly.io, Railway, a VPS behind Caddy/nginx).
 
 Rooms live in server memory: restarting the server ends all games. Empty rooms are cleaned up after an hour.

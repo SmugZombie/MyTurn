@@ -341,6 +341,22 @@ $('addBtnBtn').onclick = () => addButton($('newBtnInput').value);
 $('newBtnInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') addButton(e.target.value); });
 document.querySelectorAll('[data-preset]').forEach((b) => { b.onclick = () => addButton(b.dataset.preset); });
 
+// Hard refresh: drop the service worker + caches so the newest version loads.
+$('refreshBtn').onclick = async () => {
+  $('refreshBtn').textContent = 'Refreshing…';
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch {}
+  location.replace(location.pathname + '?v=' + Date.now()); // bypass HTTP cache too
+};
+
 // ---------- boot ----------
 $('nameInput').value = myName;
 const urlCode = location.pathname.slice(1).toUpperCase();
