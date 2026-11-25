@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>MyTurn</title>
+  <meta name="description" content="Pass the turn around the table.">
+  <meta name="theme-color" content="#14161a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyTurn">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Home: name + create / join -->
+  <section id="home" class="screen">
+    <h1 class="logo">My<span>Turn</span></h1>
+    <label class="field">
+      <span>Your name</span>
+      <input id="nameInput" maxlength="24" autocomplete="nickname" placeholder="e.g. Sam">
+    </label>
+    <button id="createBtn" class="btn primary">Create a room</button>
+    <div class="or">or join one</div>
+    <div class="row">
+      <input id="codeInput" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false">
+      <button id="joinBtn" class="btn">Join</button>
+    </div>
+  </section>
+
+  <!-- Room: lobby + game -->
+  <section id="room" class="screen hidden">
+    <header class="top">
+      <button id="leaveBtn" class="icon-btn" aria-label="Leave room">←</button>
+      <button id="codeBtn" class="code" aria-label="Share room code"><small>Room</small> <b id="roomCode">----</b></button>
+      <button id="meBtn" class="me" aria-label="Change your name"><span id="meName"></span> ✎</button>
+    </header>
+
+    <div id="status" class="status"></div>
+
+    <!-- The one big button -->
+    <div id="turnWrap" class="turn-wrap hidden">
+      <button id="turnBtn" class="turn" disabled>
+        <span id="turnLabel"></span>
+        <small id="turnSub"></small>
+      </button>
+      <div id="customBtns" class="custom-btns"></div>
+    </div>
+
+    <h2 class="section-title"><span>Seating order</span> <span id="playerCount" class="muted"></span></h2>
+    <ol id="players" class="players"></ol>
+
+    <div id="hostPanel" class="host hidden">
+      <h2 class="section-title">Host controls</h2>
+      <div id="lobbyCtrls" class="ctrl-grid">
+        <button id="shuffleBtn" class="btn">Shuffle seats</button>
+        <button id="startBtn" class="btn primary">Start game</button>
+      </div>
+      <div id="gameCtrls" class="ctrl-grid hidden">
+        <button id="backBtn" class="btn">↶ Previous</button>
+        <button id="skipBtn" class="btn">Skip ⏭</button>
+        <button id="stopBtn" class="btn danger wide">End game</button>
+      </div>
+      <h3 class="sub-title">Extra buttons for everyone</h3>
+      <div id="btnList" class="chips"></div>
+      <div class="row">
+        <input id="newBtnInput" maxlength="20" placeholder="Button label">
+        <button id="addBtnBtn" class="btn">Add</button>
+      </div>
+      <div class="chips presets">
+        <button class="chip ghost" data-preset="I win! 🏆">+ I win! 🏆</button>
+        <button class="chip ghost" data-preset="Wait! ✋">+ Wait! ✋</button>
+        <button class="chip ghost" data-preset="Snack break 🍕">+ Snack break 🍕</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Overlays -->
+  <div id="announce" class="announce hidden"><div><b id="announceName"></b><span id="announceLabel"></span></div></div>
+  <div id="toast" class="toast hidden"></div>
+  <div id="conn" class="conn hidden">Reconnecting…</div>
+
+  <dialog id="nameDialog">
+    <form method="dialog">
+      <label class="field"><span>Your name</span><input id="dialogName" maxlength="24"></label>
+      <div class="row"><button value="cancel" class="btn">Cancel</button><button value="ok" class="btn primary">Save</button></div>
+    </form>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>

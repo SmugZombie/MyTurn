@@ -1,0 +1,36 @@
+# MyTurn
+
+A tiny installable web app for passing the turn around a board-game table.
+Everyone joins a room on their phone, the host arranges the seating order, and
+only the current player's button lights up. Tap it when you're done; the next
+person's phone lights up (with a buzz and a chime).
+
+## Run
+
+```bash
+npm install
+npm start            # http://localhost:3000  (PORT env var to change)
+```
+
+## Features
+
+- **Rooms**: create one to get a 4-letter code; others join with the code or the shared link (`/ABCD`).
+- **Seating order**: the host moves players up/down, shuffles, or removes them. Late joiners sit at the end.
+- **Turn button**: enabled only on the current player's phone. Double taps can't skip anyone.
+- **Host controls**: Skip the current player, go back one turn, give the turn to anyone (▶), end the game.
+- **Extra buttons**: the host adds or removes buttons like "I win! 🏆" that every player sees. Pressing one shows a full-screen announcement on every phone.
+- **Keeps the screen awake** using the Screen Wake Lock API.
+- **Name saved** in the browser and reused next time. Reloading or a dropped connection puts you back in your seat.
+- **Installable PWA**: "Add to Home Screen" on iOS or "Install app" on Android.
+
+## Deploying (phones need HTTPS)
+
+Install-to-home-screen, the wake lock and the service worker only work over
+**HTTPS** (or on `localhost`). Phones reaching your laptop at `http://192.168.x.x:3000`
+will work for playing, but won't stay awake or install.
+
+Options:
+- Quick test from your laptop: `npx cloudflared tunnel --url http://localhost:3000` gives you an https URL.
+- Host it on any Node host that supports WebSockets (Render, Fly.io, Railway, a VPS behind Caddy/nginx).
+
+Rooms live in server memory: restarting the server ends all games. Empty rooms are cleaned up after an hour.
