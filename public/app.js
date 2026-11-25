@@ -158,6 +158,7 @@ function render() {
     }
   }
   document.body.classList.toggle('my-turn', !!myTurn);
+  $('turnShell').classList.toggle('live', !!myTurn);
   $('reactBar').querySelector('.hurry').classList.toggle('hidden', !!myTurn); // can't rush yourself
   if (myTurn && !wasMyTurn) buzz();
   wasMyTurn = !!myTurn;
@@ -442,21 +443,36 @@ const COLORS = {
   green: '#3ddc84', teal: '#2dd4bf', blue: '#4da3ff', purple: '#a77bff',
   pink: '#ff6fae', red: '#ff5c5c', orange: '#ff9f40', yellow: '#ffd23f',
 };
-const SHAPES = { circle: 'Circle', rounded: 'Rounded', wide: 'Wide' };
+const SHAPES = {
+  circle: 'Circle', rounded: 'Rounded', wide: 'Wide', blob: 'Blob', hexagon: 'Hexagon',
+  octagon: 'Octagon', flower: 'Flower', heart: 'Heart', star: 'Star',
+};
 const SIZES = { s: 'Small', m: 'Medium', l: 'Large' };
-// Button dimensions per shape+size, and a scaled-down version for the preview.
-const DIMS = {
-  circle: { s: ['min(56vw, 230px)', 'min(56vw, 230px)'], m: ['min(78vw, 320px)', 'min(78vw, 320px)'], l: ['min(92vw, 420px)', 'min(92vw, 420px)'] },
-  rounded: { s: ['min(56vw, 230px)', 'min(56vw, 230px)'], m: ['min(78vw, 320px)', 'min(78vw, 320px)'], l: ['min(92vw, 420px)', 'min(92vw, 420px)'] },
-  wide: { s: ['min(92vw, 440px)', '120px'], m: ['min(92vw, 440px)', '180px'], l: ['min(92vw, 440px)', '260px'] },
+// Shapes other than circle/rounded/wide are SVG masks in a 100x100 box, stretched to the button.
+const svgMask = (body) => `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'>${body}</svg>`)}")`;
+const petals = Array.from({ length: 8 }, (_, i) => {
+  const a = (i * Math.PI) / 4;
+  return `<circle cx='${(50 + 30 * Math.cos(a)).toFixed(1)}' cy='${(50 + 30 * Math.sin(a)).toFixed(1)}' r='19'/>`;
+}).join('');
+const MASKS = {
+  blob: svgMask("<path d='M58 4C84 8 99 30 95 56C91 84 66 99 40 95C14 91 1 70 5 44C9 16 32 0 58 4Z'/>"),
+  hexagon: svgMask("<path d='M25 3H75L100 50L75 97H25L0 50Z'/>"),
+  octagon: svgMask("<path d='M30 0H70L100 30V70L70 100H30L0 70V30Z'/>"),
+  flower: svgMask(`<g>${petals}<circle cx='50' cy='50' r='34'/></g>`),
+  heart: svgMask("<path d='M50 95C22 74 0 55 0 31C0 13 13 2 28 2C39 2 46 8 50 17C54 8 61 2 72 2C87 2 100 13 100 31C100 55 78 74 50 95Z'/>"),
+  star: svgMask("<path d='M50 3L65.9 31.2L97.6 37.5L75.7 61.3L79.4 93.5L50 80L20.6 93.5L24.3 61.3L2.4 37.5L34.1 31.2Z'/>"),
 };
-const PREVIEW = {
-  circle: { s: [90, 90], m: [118, 118], l: [146, 146] },
-  rounded: { s: [90, 90], m: [118, 118], l: [146, 146] },
-  wide: { s: [220, 60], m: [220, 90], l: [220, 130] },
-};
-const RADIUS = { circle: '50%', rounded: '22%', wide: '28px' };
-const DEFAULT_STYLE = { color: 'green', shape: 'circle', size: 'm' };
+const RADIUS = { circle: '50%', rounded: '22%', wide: '28px', blob: '0', hexagon: '0', octagon: '0', flower: '0', heart: '0', star: '0' };
+// Button dimensions per size (square shapes) plus the wide bar, and preview sizes.
+const SQUARE = { s: 'min(56vw, 230px)', m: 'min(78vw, 320px)', l: 'min(92vw, 420px)' };
+const WIDE_H = { s: '120px', m: '180px', l: '260px' };
+const PREVIEW_SQ = { s: 96, m: 120, l: 146 };
+const PREVIEW_WIDE_H = { s: 60, m: 90, l: 130 };
+
+const THEMES = { none: 'Plain', flames: 'Flames', flowers: 'Flowers', bliss: 'Bliss', galaxy: 'Galaxy', sunset: 'Sunset' };
+const SCRIM = { flowers: .45, bliss: .3, sunset: .3, flames: .2, galaxy: 0 };
+const DEFAULT_STYLE = { color: 'green', shape: 'circle', size: 'm', theme: 'none' };
 
 function loadStyle() {
   let s = {};
@@ -465,6 +481,7 @@ function loadStyle() {
     color: COLORS[s.color] ? s.color : DEFAULT_STYLE.color,
     shape: SHAPES[s.shape] ? s.shape : DEFAULT_STYLE.shape,
     size: SIZES[s.size] ? s.size : DEFAULT_STYLE.size,
+    theme: THEMES[s.theme] ? s.theme : DEFAULT_STYLE.theme,
   };
 }
 let btnStyle = loadStyle();
@@ -475,46 +492,128 @@ function colorVars(name) {
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255; // dark text on light colors
   return { '--btn': hex, '--btn-rgb': `${r}, ${g}, ${b}`, '--btn-ink': lum > 0.55 ? '#111317' : '#ffffff' };
 }
+function shapeVars(shape) {
+  return { '--btn-radius': RADIUS[shape], '--btn-mask': MASKS[shape] || 'none' };
+}
 function applyButtonStyle(target, s, preview) {
-  const vars = { ...colorVars(s.color), '--btn-radius': RADIUS[s.shape] };
+  const vars = { ...colorVars(s.color), ...shapeVars(s.shape) };
+  const wide = s.shape === 'wide';
   if (preview) {
-    const [w, h] = PREVIEW[s.shape][s.size];
-    Object.assign(vars, { '--pv-w': w + 'px', '--pv-h': h + 'px' });
+    Object.assign(vars, {
+      '--pv-w': (wide ? 220 : PREVIEW_SQ[s.size]) + 'px',
+      '--pv-h': (wide ? PREVIEW_WIDE_H[s.size] : PREVIEW_SQ[s.size]) + 'px',
+    });
   } else {
-    const [w, h] = DIMS[s.shape][s.size];
-    Object.assign(vars, { '--btn-w': w, '--btn-h': h });
+    Object.assign(vars, { '--btn-w': wide ? 'min(92vw, 440px)' : SQUARE[s.size], '--btn-h': wide ? WIDE_H[s.size] : SQUARE[s.size] });
   }
   for (const [k, v] of Object.entries(vars)) target.style.setProperty(k, v);
 }
-applyButtonStyle(document.documentElement, btnStyle);
+
+// Fill a .bg-layer with a theme. Animated themes get a handful of particles (<i>).
+// `count` is scaled down for thumbnails; reduced-motion users get the static look via CSS.
+function paintTheme(layer, theme, scale = 1) {
+  layer.className = 'bg-layer' + (theme !== 'none' ? ` theme-${theme}` : '');
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const make = (n, fn) => Array.from({ length: Math.max(1, Math.round(n * scale)) }, () => {
+    const i = document.createElement('i');
+    fn(i.style);
+    return i;
+  });
+  let parts = [];
+  if (theme === 'flames') parts = make(16, (st) => {
+    const w = rnd(14, 30);
+    st.left = rnd(-10, 100) + '%'; st.width = w + '%'; st.height = w * 1.6 + 'vh';
+    st.setProperty('--d', rnd(2.2, 4) + 's'); st.setProperty('--delay', -rnd(0, 4) + 's');
+  });
+  if (theme === 'flowers') parts = make(12, (st) => {
+    st.left = rnd(0, 100) + '%';
+    st.setProperty('--d', rnd(7, 13) + 's'); st.setProperty('--delay', -rnd(0, 13) + 's');
+    st.setProperty('--sway', rnd(-60, 60) + 'px');
+    st.background = ['#ff9fc0', '#ffffff', '#ffc2d6', '#c9a7ff'][Math.floor(rnd(0, 4))];
+  });
+  if (theme === 'bliss') parts = make(4, (st) => {
+    st.top = rnd(6, 40) + '%'; st.width = rnd(90, 180) + 'px';
+    st.setProperty('--d', rnd(45, 90) + 's'); st.setProperty('--delay', -rnd(0, 90) + 's');
+  });
+  if (theme === 'galaxy') parts = make(70, (st) => {
+    st.left = rnd(0, 100) + '%'; st.top = rnd(0, 100) + '%';
+    const sz = rnd(1, 2.6); st.width = st.height = sz + 'px';
+    st.setProperty('--d', rnd(2, 5) + 's'); st.setProperty('--delay', -rnd(0, 5) + 's');
+  });
+  layer.replaceChildren(...parts);
+}
+
+function applyTheme(theme) {
+  paintTheme($('bgLayer'), theme);
+  document.body.classList.toggle('themed', theme !== 'none');
+  document.body.style.setProperty('--scrim', SCRIM[theme] ?? 0);
+}
+
+function applyAllStyles() {
+  applyButtonStyle(document.documentElement, btnStyle);
+  applyTheme(btnStyle.theme);
+  $('turnBtn').dataset.shape = btnStyle.shape;
+}
+applyAllStyles();
 
 let draftStyle = btnStyle;
+let previewTheme = null;
 function renderStyleOptions() {
   const pressed = (b, on) => b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const pick = (key, val) => () => { draftStyle = { ...draftStyle, [key]: val }; renderStyleOptions(); };
   $('colorOpts').replaceChildren(...Object.entries(COLORS).map(([name, hex]) => {
     const b = el('button', 'swatch');
     b.type = 'button';
     b.style.background = hex;
     b.setAttribute('aria-label', name);
     pressed(b, draftStyle.color === name);
-    b.onclick = () => { draftStyle = { ...draftStyle, color: name }; renderStyleOptions(); };
+    b.onclick = pick('color', name);
     return b;
   }));
-  const seg = (box, options, key) => box.replaceChildren(...Object.entries(options).map(([val, label]) => {
+  $('shapeOpts').replaceChildren(...Object.entries(SHAPES).map(([val, label]) => {
+    const b = el('button');
+    b.type = 'button';
+    const icon = el('span', 'shape-icon' + (val === 'wide' ? ' wide' : ''));
+    for (const [k, v] of Object.entries({ ...colorVars(draftStyle.color), ...shapeVars(val) })) icon.style.setProperty(k, v);
+    if (val === 'wide') icon.style.setProperty('--btn-radius', '7px');
+    b.append(icon, label);
+    pressed(b, draftStyle.shape === val);
+    b.onclick = pick('shape', val);
+    return b;
+  }));
+  $('sizeOpts').replaceChildren(...Object.entries(SIZES).map(([val, label]) => {
     const b = el('button', '', label);
     b.type = 'button';
-    pressed(b, draftStyle[key] === val);
-    b.onclick = () => { draftStyle = { ...draftStyle, [key]: val }; renderStyleOptions(); };
+    pressed(b, draftStyle.size === val);
+    b.onclick = pick('size', val);
     return b;
   }));
-  seg($('shapeOpts'), SHAPES, 'shape');
-  seg($('sizeOpts'), SIZES, 'size');
+  // Theme thumbnails are only built once per sheet opening (particles are random).
+  if (!$('bgOpts').children.length) {
+    $('bgOpts').replaceChildren(...Object.entries(THEMES).map(([val, label]) => {
+      const b = el('button');
+      b.type = 'button';
+      b.dataset.theme = val;
+      const thumb = el('span', 'bg-thumb');
+      const layer = el('span', 'bg-layer');
+      paintTheme(layer, val, 0.25);
+      if (val === 'none') thumb.style.background = 'var(--panel)';
+      thumb.append(layer);
+      b.append(thumb, label);
+      b.onclick = pick('theme', val);
+      return b;
+    }));
+  }
+  for (const b of $('bgOpts').children) pressed(b, b.dataset.theme === draftStyle.theme);
+  if (previewTheme !== draftStyle.theme) { previewTheme = draftStyle.theme; paintTheme($('previewBg'), previewTheme, 0.4); }
   applyButtonStyle($('btnPreview'), draftStyle, true);
 }
 
 function openYouSheet() {
   $('dialogName').value = myName || $('nameInput').value.trim();
   draftStyle = { ...btnStyle };
+  previewTheme = null;
+  $('bgOpts').replaceChildren();
   renderStyleOptions();
   openDialog($('nameDialog'));
 }
@@ -524,7 +623,7 @@ $('nameDialog').addEventListener('close', () => {
   if ($('nameDialog').returnValue !== 'ok') return;
   btnStyle = draftStyle;
   store.set('btn', JSON.stringify(btnStyle));
-  applyButtonStyle(document.documentElement, btnStyle);
+  applyAllStyles();
   const v = $('dialogName').value.trim();
   if (v && v !== myName) setName(v);
   if (room) render();
